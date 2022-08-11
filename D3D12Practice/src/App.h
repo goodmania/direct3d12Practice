@@ -46,7 +46,7 @@ private:
 	void Render();
 	void WaitGpu();
 
-	void Present(uint32_t interval);
+	void Present(uint32_t interval); // ï\é¶èàóù
 
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp);
 };

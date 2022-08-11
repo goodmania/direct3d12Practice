@@ -1,11 +1,12 @@
 ﻿#include "App.h"
+#include <assert.h>
 
 namespace {
 	const auto ClassName = TEXT("SmapleWindowClass");
 	template<typename T> 
 	void SafeRelease(T*& ptr) { 
 		if (ptr != nullptr) {
-			ptr— > Release();
+			ptr->Release();
 			ptr = nullptr; }
 	}
 }
@@ -36,12 +37,17 @@ bool App::InitApp()
 		return false;
 	}
 
+	if (!InitD3D()) {
+		return false;
+	}
+
 	// 正常終了
 	return true;
 }
 
 void App::TermApp()
 {
+	TermD3D();
 	TermWnd();
 }
 
@@ -123,6 +129,8 @@ void App::MainLoop()
 
 	while (WM_QUIT != msg.message)
 	{
+		Render();
+		Present(0);
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE) == TRUE) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -268,6 +276,7 @@ bool App::InitD3D()
 				&viewDesc,
 				handle
 			); 
+
 			// 割り当てるアドレスを指定。
 			m_HandleRTV[i] = handle;
 			handle.ptr += incrementSize;
@@ -305,6 +314,39 @@ bool App::InitD3D()
 
 void App::TermD3D()
 {
+	WaitGpu();
+
+	if (m_FenceEvent != nullptr)
+	{
+		CloseHandle(m_FenceEvent);
+		m_FenceEvent = nullptr;
+	}
+
+	// フェンスの破棄
+	SafeRelease(m_pFence);
+
+	// レンダーターゲットビューの破棄
+	SafeRelease(m_pHeapRTV);
+	for (auto i = 0u; i < FrameCount; ++i) {
+		SafeRelease(m_pColorBuffer[i]);
+	}
+
+	// コマンドリストの破棄
+	SafeRelease(m_pCmdList);
+
+	// コマンドアロケーターの破棄
+	for (auto i = 0u; i < FrameCount; ++i) {
+		SafeRelease(m_pCmdAllocator[i]);
+	}
+
+	// スワップチェインの破棄
+	SafeRelease(m_pSwapChain);
+
+	// コマンドキューの破棄
+	SafeRelease(m_pQueue);
+
+	//デバイスの破棄
+	SafeRelease(m_pDevice);
 }
 
 void App::Render()
@@ -313,17 +355,23 @@ void App::Render()
 	// 描画コマンドの作成を開始。
 	m_pCmdList->Reset(m_pCmdAllocator[m_FrameIndex], nullptr); 
 
+	// リソースバリア
 	D3D12_RESOURCE_BARRIER barrier = {};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	barrier.Transition.pResource = m_pColorBuffer[m_FrameIndex];
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION; // 表示->書き込みへ状態が遷移する
+	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE; // 開始と終了両方に設定するのでNONE
+	barrier.Transition.pResource = m_pColorBuffer[m_FrameIndex]; 
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
 	m_pCmdList->ResourceBarrier(1, &barrier);
 
-	m_pCmdList->OMSetRenderTargets(1, &m_HandleRTV[m_FrameIndex], FALSE, nullptr);
+	m_pCmdList->OMSetRenderTargets(
+		1,								// ディスクリプタハンドルの数
+		&m_HandleRTV[m_FrameIndex],		// ディスクリプタハンドルの配列
+		FALSE,							// ディスクリプタハンドルが独立かどうか
+		nullptr							// 深度ステンシルビューのディスクリプタ
+	);
 
 	float clearColor[] = { 0.25f, 0.25f, 0.25f, 1.0f };
 
@@ -343,6 +391,7 @@ void App::Render()
 
 	m_pCmdList->ResourceBarrier(1, &barrier);
 
+	// 描画コマンドの記録終了
 	m_pCmdList->Close();
 
 	ID3D12CommandList* ppCmdLists[] = { m_pCmdList };
@@ -351,10 +400,47 @@ void App::Render()
 
 void App::WaitGpu()
 {
+	assert(m_pQueue != nullptr);
+	assert(m_pFence != nullptr);
+	assert(m_FenceEvent != nullptr);
+
+	m_pQueue->Signal(m_pFence, m_FenceCounter[m_FrameIndex]);
+
+	m_pFence->SetEventOnCompletion(m_FenceCounter[m_FrameIndex], m_FenceEvent);
+
+	WaitForSingleObjectEx(m_FenceEvent, INFINITE, FALSE);
+
+	m_FenceCounter[m_FrameIndex]++;
 }
 
 void App::Present(uint32_t interval)
 {
+	// フロントバッファを画面に表示、バックバッファのスワップ処理
+	m_pSwapChain->Present(
+		interval,		// 垂直同期とフレームの表示を同期する方法を指定。0-immidiate 1-1回目の垂直同期後(60fps) 2 - 2回目の垂直同期後(30fps)
+		0
+	);
+
+	// シグナル処理
+	const auto currentValue = m_FenceCounter[m_FrameIndex];
+	m_pQueue->Signal(
+		m_pFence,		// フェンスオブジェクトのポインタ
+		currentValue	// フェンスに設定する値
+	);
+
+	// バックバッファ番号を更新
+	m_FrameIndex = m_pSwapChain->GetCurrentBackBufferIndex();
+
+	// 次のフレームの描画準備がまだであれば待機する。
+	if (m_pFence->GetCompletedValue() < m_FenceCounter[m_FrameIndex]) {
+
+		m_pFence->SetEventOnCompletion(m_FenceCounter[m_FrameIndex], m_FenceEvent);
+
+		WaitForSingleObjectEx(m_FenceEvent, INFINITE, FALSE); 
+	}
+
+	// 次のフレームのフェンスカウンターを増やす
+	m_FenceCounter[m_FrameIndex] = currentValue + 1;
 }
 
 LRESULT App::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
