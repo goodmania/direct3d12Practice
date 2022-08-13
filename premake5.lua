@@ -24,7 +24,8 @@ project "D3D12Practice"
 	files
 	{
 		"%{prj.name}/include/**.h",
-		"%{prj.name}/src/**.cpp"
+		"%{prj.name}/src/**.cpp",
+		"%{prj.name}/../assets/shader/**.hlsl"
 	}
 
 	includedirs
@@ -49,7 +50,7 @@ project "D3D12Practice"
 
 		defines
 		{
-			
+			-- WINDOWS
 		}
 
 	filter "configurations:Debug"
@@ -66,3 +67,17 @@ project "D3D12Practice"
 		defines "VOE_DIST"
 		buildoptions "/MD"
 		optimize "On"
+
+	filter { "files:**.hlsl" }
+    flags "ExcludeFromBuild"
+    shadermodel "6.0"
+
+    filter { "files:**_p.hlsl" }
+   	removeflags "ExcludeFromBuild"
+   	shadertype "Pixel"
+   	shaderentry "ForPixel"
+
+	filter { "files:**_v.hlsl" }
+   	removeflags "ExcludeFromBuild"
+   	shadertype "Vertex"
+   	shaderentry "ForVertex"
