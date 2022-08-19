@@ -6,11 +6,28 @@
 #include <dxgi1_4.h>
 #include <DirectXMath.h>
 #include <wrl/client.h>
+#include <d3dcompiler.h>
 
 #pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxgi.lib")
 
 template<typename T> using ComPtr = Microsoft::WRL::ComPtr<T>;
+
+struct alignas(256) Transform {
+	DirectX::XMMATRIX World;
+	DirectX::XMMATRIX View;
+	DirectX::XMMATRIX Proj;
+};
+
+template <typename T>
+struct ConstantBufferView
+{
+	D3D12_CONSTANT_BUFFER_VIEW_DESC Desc;
+	D3D12_CPU_DESCRIPTOR_HANDLE HandleCPU;
+	D3D12_GPU_DESCRIPTOR_HANDLE HandleGPU;
+	T* pBuffer;
+};
 
 class App {
 public:
@@ -48,7 +65,7 @@ private:
 	D3D12_VERTEX_BUFFER_VIEW m_VBV;
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;
-	// ConstantBufferView<Transform> m_CBV[FrameCount];
+	ConstantBufferView<Transform> m_CBV[FrameCount];
 	float m_RotateAngle;
 
 	bool InitApp();
@@ -61,6 +78,9 @@ private:
 	void TermD3D();
 	void Render();
 	void WaitGpu();
+
+	bool OnInit();
+	void OnTerm();
 
 	void Present(uint32_t interval); // ï\é¶èàóù
 

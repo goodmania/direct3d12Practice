@@ -71,13 +71,13 @@ project "D3D12Practice"
 	filter { "files:**.hlsl" }
     flags "ExcludeFromBuild"
     shadermodel "6.0"
+	shaderobjectfileoutput ("../shader_bin/".."%{file.basename}"..".cso")
 
     filter { "files:**_p.hlsl" }
    	removeflags "ExcludeFromBuild"
    	shadertype "Pixel"
-   	shaderentry "ForPixel"
 
 	filter { "files:**_v.hlsl" }
    	removeflags "ExcludeFromBuild"
    	shadertype "Vertex"
-   	shaderentry "ForVertex"
+
