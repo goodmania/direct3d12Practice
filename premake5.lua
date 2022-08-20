@@ -67,7 +67,9 @@ project "D3D12Practice"
 		defines "VOE_DIST"
 		buildoptions "/MD"
 		optimize "On"
+	
 
+	
 	filter { "files:**.hlsl" }
     flags "ExcludeFromBuild"
     shadermodel "6.0"

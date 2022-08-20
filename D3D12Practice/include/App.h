@@ -53,20 +53,23 @@ private:
 	ComPtr<ID3D12Fence> m_pFence;
 	ComPtr<ID3D12DescriptorHeap> m_pHeapCBV;
 	ComPtr<ID3D12Resource> m_pVB;
-	ComPtr<ID3D12Resource> m_pCB[FrameCount];
+	ComPtr<ID3D12Resource> m_pIB;
+	ComPtr<ID3D12Resource> m_pCB[FrameCount * 2];
+
 	ComPtr<ID3D12RootSignature> m_pRootSignature;
 	ComPtr<ID3D12PipelineState> m_pPSO;
 
-	HANDLE m_FenceEvent;
+	HANDLE m_FenceEvent = nullptr;
 	uint64_t m_FenceCounter[FrameCount];
-	uint32_t m_FrameIndex;
+	uint32_t m_FrameIndex = 0;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_HandleRTV[FrameCount];
 
 	D3D12_VERTEX_BUFFER_VIEW m_VBV;
+	D3D12_INDEX_BUFFER_VIEW m_IBV;
 	D3D12_VIEWPORT m_Viewport;
 	D3D12_RECT m_Scissor;
-	ConstantBufferView<Transform> m_CBV[FrameCount];
-	float m_RotateAngle;
+	ConstantBufferView<Transform> m_CBV[FrameCount * 2];
+	float m_RotateAngle = 0.0f;
 
 	bool InitApp();
 	void TermApp();
