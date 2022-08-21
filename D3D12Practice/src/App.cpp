@@ -399,12 +399,16 @@ void App::Render()
 		1,								// ディスクリプタハンドルの数
 		&m_HandleRTV[m_FrameIndex],		// ディスクリプタハンドルの配列
 		FALSE,							// ディスクリプタハンドルが独立かどうか
-		nullptr							// 深度ステンシルビューのディスクリプタ
+		&m_HandleDSV					// 深度ステンシルビューのディスクリプタ
 	);
 
 	float clearColor[] = { 0.25f, 0.25f, 0.25f, 1.0f };
 
+	// レンダーターゲットビューのクリア
 	m_pCmdList->ClearRenderTargetView(m_HandleRTV[m_FrameIndex], clearColor, 0, nullptr);
+
+	// 深度ステンシルビューのクリア
+	m_pCmdList->ClearDepthStencilView(m_HandleDSV, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	// 描画処理
 	{
@@ -836,6 +840,14 @@ bool App::OnInit()
 		for (UINT i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i) {
 			descBS.RenderTarget[i] = descRTBS;
 		}
+
+		// 深度ステンシルステートの設定
+		D3D12_DEPTH_STENCIL_DESC descDSS = {};
+		descDSS.DepthEnable = TRUE;
+		descDSS.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		descDSS.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		descDSS.StencilEnable = FALSE;
+
 		ComPtr<ID3DBlob> pVSBlob;
 		ComPtr<ID3DBlob> pPSBlob;
 
@@ -864,13 +876,12 @@ bool App::OnInit()
 		};
 		desc.RasterizerState = descRS;
 		desc.BlendState = descBS;
-		desc.DepthStencilState.DepthEnable = FALSE;
-		desc.DepthStencilState.StencilEnable = FALSE;
+		desc.DepthStencilState = descDSS;
 		desc.SampleMask = UINT_MAX;
 		desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		desc.NumRenderTargets = 1;
 		desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-		desc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+		desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 		desc.SampleDesc.Count = 1;
 		desc.SampleDesc.Quality = 0;
 

@@ -46,9 +46,11 @@ private:
 	ComPtr<ID3D12CommandQueue> m_pQueue;
 	ComPtr<IDXGISwapChain3> m_pSwapChain;
 	ComPtr<ID3D12Resource> m_pColorBuffer[FrameCount];
+	ComPtr<ID3D12Resource> m_pDepthBuffer;
 	ComPtr<ID3D12CommandAllocator> m_pCmdAllocator[FrameCount];
 	ComPtr<ID3D12GraphicsCommandList> m_pCmdList;
 	ComPtr<ID3D12DescriptorHeap> m_pHeapRTV;
+	ComPtr<ID3D12DescriptorHeap> m_pHeapDSV;
 
 	ComPtr<ID3D12Fence> m_pFence;
 	ComPtr<ID3D12DescriptorHeap> m_pHeapCBV;
@@ -63,6 +65,7 @@ private:
 	uint64_t m_FenceCounter[FrameCount];
 	uint32_t m_FrameIndex = 0;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_HandleRTV[FrameCount];
+	D3D12_CPU_DESCRIPTOR_HANDLE m_HandleDSV;
 
 	D3D12_VERTEX_BUFFER_VIEW m_VBV;
 	D3D12_INDEX_BUFFER_VIEW m_IBV;
@@ -70,6 +73,8 @@ private:
 	D3D12_RECT m_Scissor;
 	ConstantBufferView<Transform> m_CBV[FrameCount * 2];
 	float m_RotateAngle = 0.0f;
+
+	
 
 	bool InitApp();
 	void TermApp();
