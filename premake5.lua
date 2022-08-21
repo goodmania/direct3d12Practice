@@ -25,12 +25,12 @@ project "D3D12Practice"
 	{
 		"%{prj.name}/include/**.h",
 		"%{prj.name}/src/**.cpp",
-		"%{prj.name}/../assets/shader/**.hlsl"
+		"%{prj.name}/../assets/shader/**.hlsl",
 	}
 
 	includedirs
 	{
-		"%{prj.name}/include"
+		"%{prj.name}/include",
 	}
 
 	libdirs 

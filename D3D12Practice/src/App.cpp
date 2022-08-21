@@ -1,4 +1,11 @@
 ﻿#include "App.h"
+
+#include <resourceup>
+#include "DDSTextureLoader.h"
+#include "VertexTypes.h"
+
+#include "FileUtil.h"
+
 #include <assert.h>
 
 namespace {
